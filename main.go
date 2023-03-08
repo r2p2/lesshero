@@ -87,10 +87,18 @@ func getTimes(commits []Commit) (times []string) {
 	return times
 }
 
-func getSlocs(commits []Commit) []opts.LineData {
+func getSlocs(commits []Commit) ([]opts.LineData, []opts.LineData) {
 	items := make([]opts.LineData, 0)
+	items_dec := make([]opts.LineData, 0)
 	for i := 0; i < len(commits); i++ {
 		items = append(items, opts.LineData{Value: commits[i].runningTotal, Name: commits[i].hash})
+		items_dec = append(items_dec, opts.LineData{Value: func() interface{} {
+			if commits[i].total < 0 || i < len(commits)-1 && commits[i+1].total < 0 {
+				return commits[i].runningTotal
+			} else {
+				return "-"
+			}
+		}(), Name: commits[i].hash})
 	}
 	if os.Getenv("LOG_LEVEL") == "debug" {
 		// print first item
@@ -98,19 +106,7 @@ func getSlocs(commits []Commit) []opts.LineData {
 		// print last item
 		fmt.Printf("last %d\n", items[len(items)-1].Value)
 	}
-	return items
-}
-
-func getDecSlocs(commits []Commit) []opts.LineData {
-	items := make([]opts.LineData, 0)
-	for i := 0; i < len(commits); i++ {
-		if commits[i].total < 0 || i < len(commits)-1 && commits[i+1].total < 0 {
-			items = append(items, opts.LineData{Value: commits[i].runningTotal, Name: commits[i].hash})
-		} else {
-			items = append(items, opts.LineData{Value: "-", Name: commits[i].hash})
-		}
-	}
-	return items
+	return items, items_dec
 }
 
 func chartHero(commits []Commit, gitSrc, fn string) error {
@@ -146,7 +142,8 @@ func chartHero(commits []Commit, gitSrc, fn string) error {
 			},
 		}),
 	)
-	line.SetXAxis(getTimes(commits)).AddSeries("SLOC", getSlocs(commits), charts.WithLineStyleOpts(opts.LineStyle{Color: "red"})).AddSeries("SLOC", getDecSlocs(commits), charts.WithLineStyleOpts(opts.LineStyle{Color: "green"}))
+	items, items_dec := getSlocs(commits)
+	line.SetXAxis(getTimes(commits)).AddSeries("SLOC", items, charts.WithLineStyleOpts(opts.LineStyle{Color: "red"})).AddSeries("SLOC", items_dec, charts.WithLineStyleOpts(opts.LineStyle{Color: "green"}))
 
 	dynamicFn := fmt.Sprintf(
 		`goecharts_%s.on('click', function (params) { navigator.clipboard.writeText(params.name); console.log(params.name, "copied to clipboard"); });`,
