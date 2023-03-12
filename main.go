@@ -58,16 +58,20 @@ func main() {
 	highlightHero(commits)
 
 	if chartPath != "" {
-		// calculate running total, starting from the end (beginning) of commits
-		runningTotal := 0
-		for i := 0; i < len(commits); i++ {
-			runningTotal += commits[i].total
-			commits[i].runningTotal = runningTotal
-		}
+		calcRunningTotal(commits)
 		err = chartHero(commits, gitSrc, chartPath)
 		if err != nil {
 			log.Fatal(err)
 		}
+	}
+}
+
+func calcRunningTotal(commits []Commit) {
+	// calculate running total, starting from the end (beginning) of commits
+	runningTotal := 0
+	for i := 0; i < len(commits); i++ {
+		runningTotal += commits[i].total
+		commits[i].runningTotal = runningTotal
 	}
 }
 
